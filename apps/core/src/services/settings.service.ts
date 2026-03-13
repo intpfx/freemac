@@ -64,7 +64,7 @@ function buildSetupStatus(): SetupStatus {
   const settings = loadAppSettings();
   const publicHost = settings?.publicHost || config.host;
   const publicPort = settings?.publicPort || config.port;
-  const relayOrigin = settings?.relayOrigin || config.relayOrigin;
+  const relayOrigin = settings?.relayOrigin?.trim() || config.relayOrigin;
 
   return {
     initialized: Boolean(settings?.initializedAt && settings.passwordHash),
@@ -89,7 +89,7 @@ export async function hydrateRuntimeSettings(): Promise<void> {
   applyRuntimeConfig({
     host: settings?.publicHost,
     port: settings?.publicPort,
-    relayOrigin: settings?.relayOrigin,
+    relayOrigin: settings?.relayOrigin?.trim() ? settings.relayOrigin : config.relayOrigin,
   });
 
   hydrated = true;
@@ -110,10 +110,10 @@ export async function initializeSetup(payload: SetupInitPayload): Promise<SetupS
     initializedAt,
     publicHost: "::",
     publicPort: payload.publicPort,
-    relayOrigin: settings?.relayOrigin || config.relayOrigin,
+    relayOrigin: settings?.relayOrigin?.trim() || config.relayOrigin,
   });
 
-  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin || config.relayOrigin);
+  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin?.trim() || config.relayOrigin);
 
   applyRuntimeConfig({ sessionPassword: payload.password });
 
@@ -129,10 +129,10 @@ export async function updateNetworkSettings(payload: NetworkSettingsPayload): Pr
     initializedAt: settings?.initializedAt || null,
     publicHost: "::",
     publicPort: payload.publicPort,
-    relayOrigin: settings?.relayOrigin || config.relayOrigin,
+    relayOrigin: settings?.relayOrigin?.trim() || config.relayOrigin,
   });
 
-  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin || config.relayOrigin);
+  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin?.trim() || config.relayOrigin);
   return getSetupStatus();
 }
 

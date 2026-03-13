@@ -7,7 +7,8 @@ restricted natural-language agent.
 
 - `apps/core`: Bun + Elysia local service
 - `apps/web`: React + Vite dashboard
-- `apps/deno-deploy`: Deno Deploy relay that stores the latest IPv6 endpoint in Deno KV and renders it in a web page
+- `apps/deno-deploy`: Deno Deploy relay that stores the latest IPv6 endpoint in
+  Deno KV and renders it in a web page
 - `packages/shared`: shared types and schemas
 - `deploy`: launchd and Caddy examples
 - `docs`: setup and MVP notes

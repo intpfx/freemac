@@ -229,6 +229,39 @@ input {
   flex-wrap: wrap;
 }
 
+.relay-status {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.relay-status--idle {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.relay-status--running {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.relay-status--success {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.relay-status--error {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.relay-status__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: #51617f;
+}
+
 .ghost-button-solid {
   background: rgba(23, 41, 79, 0.08);
   color: #1b3d87;

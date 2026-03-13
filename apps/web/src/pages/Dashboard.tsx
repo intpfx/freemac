@@ -14,6 +14,74 @@ interface OverviewResponse {
   snapshot: SystemSnapshot;
 }
 
+interface RelayStatusPresentation {
+  connectionLabel: string;
+  reportLabel: string;
+  tone: "idle" | "success" | "error" | "running";
+}
+
+const DEFAULT_RELAY_STATE: RelayReportState = {
+  configured: false,
+  relayOrigin: "",
+  status: "idle",
+  lastReportedAt: null,
+  errorMessage: null,
+  lastTargetUrl: null,
+};
+
+function normalizeOverviewResponse(data: Partial<OverviewResponse>): OverviewResponse | null {
+  if (!data.setup || !data.ddns || !data.snapshot) {
+    return null;
+  }
+
+  return {
+    setup: data.setup,
+    ddns: data.ddns,
+    snapshot: data.snapshot,
+    relay: data.relay || DEFAULT_RELAY_STATE,
+  };
+}
+
+function describeRelayState(relay: RelayReportState | null | undefined): RelayStatusPresentation {
+  if (!relay || !relay.configured) {
+    return {
+      connectionLabel: "未连接",
+      reportLabel: "未配置",
+      tone: "idle",
+    };
+  }
+
+  if (relay.status === "running") {
+    return {
+      connectionLabel: "已连接",
+      reportLabel: "上报中",
+      tone: "running",
+    };
+  }
+
+  if (relay.errorMessage) {
+    return {
+      connectionLabel: "已连接",
+      reportLabel: "上报失败",
+      tone: "error",
+    };
+  }
+
+  if (relay.lastReportedAt) {
+    return {
+      connectionLabel: "已连接",
+      reportLabel: "上报成功",
+      tone: "success",
+    };
+  }
+
+  return {
+    connectionLabel: "已连接",
+    reportLabel: "等待首次上报",
+    tone: "idle",
+  };
+}
+
 interface SetupFormState {
   password: string;
   publicPort: string;
@@ -81,7 +149,12 @@ export function Dashboard() {
 
     void fetch("/system/overview")
       .then((response) => response.json())
-      .then((data: OverviewResponse) => {
+      .then((raw: Partial<OverviewResponse>) => {
+        const data = normalizeOverviewResponse(raw);
+        if (!data) {
+          return;
+        }
+
         setOverview(data);
         setSetupForm((current) => ({
           ...current,
@@ -94,7 +167,11 @@ export function Dashboard() {
 
     const events = new EventSource("/events/stream");
     events.onmessage = (event) => {
-      const data = JSON.parse(event.data) as OverviewResponse;
+      const raw = JSON.parse(event.data) as Partial<OverviewResponse>;
+      const data = normalizeOverviewResponse(raw);
+      if (!data) {
+        return;
+      }
       setOverview(data);
     };
 
@@ -156,7 +233,12 @@ export function Dashboard() {
       return;
     }
 
-    const refreshed = await fetch("/system/overview").then((result) => result.json()) as OverviewResponse;
+    const refreshedRaw = await fetch("/system/overview").then((result) => result.json()) as Partial<OverviewResponse>;
+    const refreshed = normalizeOverviewResponse(refreshedRaw);
+    if (!refreshed) {
+      setSetupError("Setup saved, but dashboard refresh returned incomplete data.");
+      return;
+    }
     setOverview(refreshed);
     setSetupForm((current) => ({
       ...current,
@@ -282,7 +364,15 @@ export function Dashboard() {
       body: JSON.stringify(parsed.data),
     });
 
-    const data = await response.json() as { ok?: boolean; message?: string; status?: SetupStatus; relay?: RelayReportState };
+    const raw = await response.text();
+    let data: { ok?: boolean; message?: string; status?: SetupStatus; relay?: RelayReportState } = {};
+    if (raw) {
+      try {
+        data = JSON.parse(raw) as { ok?: boolean; message?: string; status?: SetupStatus; relay?: RelayReportState };
+      } catch {
+        data = {};
+      }
+    }
     if (!response.ok || !data.ok || !data.status || !data.relay) {
       setRelayError(data.message || "Failed to save relay settings.");
       return;
@@ -315,7 +405,15 @@ export function Dashboard() {
         method: "POST",
         headers: createHeaders(true),
       });
-      const data = await response.json() as { ok?: boolean; message?: string; relay?: RelayReportState };
+      const raw = await response.text();
+      let data: { ok?: boolean; message?: string; relay?: RelayReportState } = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as { ok?: boolean; message?: string; relay?: RelayReportState };
+        } catch {
+          data = {};
+        }
+      }
       if (!response.ok || !data.ok || !data.relay) {
         setRelayError(data.message || "Relay report failed.");
         return;
@@ -342,6 +440,7 @@ export function Dashboard() {
   const initialized = overview?.setup.initialized ?? false;
   const locked = !initialized || authState !== "authenticated";
   const showAuthDock = !initialized || authState !== "authenticated";
+  const relayPresentation = describeRelayState(overview?.relay);
 
   return (
     <main className="shell shell-frame">
@@ -385,6 +484,16 @@ export function Dashboard() {
               <p>Access URL: {`http://[${overview.ddns.currentIpv6}]:${overview.setup.publicPort}`}</p>
             )}
             <p>Relay Origin: {overview?.setup.relayOrigin || "--"}</p>
+            <div className={`relay-status relay-status--${relayPresentation.tone}`}>
+              <div>
+                <span className="relay-status__label">Relay</span>
+                <strong>{relayPresentation.connectionLabel}</strong>
+              </div>
+              <div>
+                <span className="relay-status__label">状态</span>
+                <strong>{relayPresentation.reportLabel}</strong>
+              </div>
+            </div>
           </article>
           <article className="panel">
             <div className="panel-header">
@@ -435,9 +544,9 @@ export function Dashboard() {
             {networkMessage && <p className="helper-text">{networkMessage}</p>}
             {relayError && <p className="error-text">{relayError}</p>}
             {relayMessage && <p className="helper-text">{relayMessage}</p>}
-            {overview?.relay.lastReportedAt && <p className="helper-text">Last relay report: {overview.relay.lastReportedAt}</p>}
-            {overview?.relay.lastTargetUrl && <p className="helper-text">Relay target: {overview.relay.lastTargetUrl}</p>}
-            {overview?.relay.errorMessage && <p className="error-text">Relay error: {overview.relay.errorMessage}</p>}
+            {overview?.relay?.lastReportedAt && <p className="helper-text">Last relay report: {overview.relay.lastReportedAt}</p>}
+            {overview?.relay?.lastTargetUrl && <p className="helper-text">Relay target: {overview.relay.lastTargetUrl}</p>}
+            {overview?.relay?.errorMessage && <p className="error-text">Relay error: {overview.relay.errorMessage}</p>}
             <div className="button-row">
               <button className="button" onClick={saveNetworkSettings}>Save Port</button>
               <button className="button ghost-button-solid" onClick={saveRelaySettings}>Save Relay</button>

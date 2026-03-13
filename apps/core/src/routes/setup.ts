@@ -51,14 +51,24 @@ export const setupRoutes = new Elysia({ prefix: "/setup" })
         return { ok: false, message: "Unauthorized" };
       }
 
-      const status = await updateRelaySettings(body);
-      const relay = await reportRelayTarget();
-      return {
-        ok: true,
-        status,
-        relay,
-        message: "Relay origin saved. Automatic reporting is active.",
-      };
+      try {
+        const status = await updateRelaySettings(body);
+        const relay = await reportRelayTarget();
+        return {
+          ok: true,
+          status,
+          relay,
+          message: status.relayOrigin
+            ? "Relay origin saved. Automatic reporting is active."
+            : "Relay origin cleared. Automatic reporting is disabled.",
+        };
+      } catch (error) {
+        set.status = 400;
+        return {
+          ok: false,
+          message: error instanceof Error ? error.message : "Invalid relay origin.",
+        };
+      }
     },
     {
       body: t.Object({

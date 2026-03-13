@@ -12,6 +12,7 @@ const kv = await Deno.openKv();
 const TARGET_KEY = ["freemac", "latest-target"] as const;
 const HISTORY_KEY = ["freemac", "history"] as const;
 const UPDATE_TOKEN = Deno.env.get("FREEMAC_UPDATE_TOKEN") || "";
+const PROXIED_PREFIXES = ["/assets/", "/auth/", "/system/", "/setup/", "/agent/", "/events/"];
 
 function json(data: unknown, init?: ResponseInit): Response {
   return new Response(JSON.stringify(data, null, 2), {
@@ -44,6 +45,55 @@ function buildAccessUrl(target: StoredTarget): string {
   return `${target.protocol}://[${target.ipv6}]:${target.port}`;
 }
 
+function shouldProxy(url: URL): boolean {
+  if (url.pathname === "/app" || url.pathname === "/app/") {
+    return true;
+  }
+
+  if (url.pathname.startsWith("/api/") && url.pathname !== "/api/report" && url.pathname !== "/api/status") {
+    return true;
+  }
+
+  return PROXIED_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+}
+
+function buildProxyUrl(requestUrl: URL, target: StoredTarget): URL {
+  const upstream = new URL(buildAccessUrl(target));
+  if (requestUrl.pathname === "/app" || requestUrl.pathname === "/app/") {
+    upstream.pathname = "/";
+    upstream.search = requestUrl.search;
+    return upstream;
+  }
+
+  upstream.pathname = requestUrl.pathname;
+  upstream.search = requestUrl.search;
+  return upstream;
+}
+
+async function proxyToTarget(request: Request, requestUrl: URL, target: StoredTarget): Promise<Response> {
+  const upstreamUrl = buildProxyUrl(requestUrl, target);
+  const headers = new Headers(request.headers);
+  headers.delete("host");
+  headers.delete("content-length");
+
+  const upstream = await fetch(upstreamUrl, {
+    method: request.method,
+    headers,
+    body: request.method === "GET" || request.method === "HEAD" ? undefined : request.body,
+    redirect: "manual",
+  });
+
+  const responseHeaders = new Headers(upstream.headers);
+  responseHeaders.delete("content-length");
+  responseHeaders.set("x-freemac-relay", "deno-proxy");
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: responseHeaders,
+  });
+}
+
 async function loadTarget(): Promise<StoredTarget | null> {
   const result = await kv.get<StoredTarget>(TARGET_KEY);
   return result.value;
@@ -67,12 +117,9 @@ function authorized(request: Request): boolean {
 
 function renderPage(target: StoredTarget | null, requestUrl: URL): string {
   const accessUrl = target ? buildAccessUrl(target) : "";
-  const mixedContentRisk = Boolean(target && requestUrl.protocol === "https:" && target.protocol === "http");
   const title = target ? `freemac relay -> ${target.ipv6}:${target.port}` : "freemac relay";
   const source = target?.source ? `<p class=\"meta\">source: ${escapeHtml(target.source)}</p>` : "";
-  const warning = mixedContentRisk
-    ? `<div class=\"warning\">This page is served over HTTPS, but the target uses HTTP. Most browsers will block the iframe as mixed content. Use the direct-open link below, or expose the target over HTTPS.</div>`
-    : "";
+  const proxyUrl = target ? `${requestUrl.origin}/app` : "";
   const body = target
     ? `
       <section class="card">
@@ -80,10 +127,10 @@ function renderPage(target: StoredTarget | null, requestUrl: URL): string {
         <p class="meta">updated: ${escapeHtml(target.updatedAt)}</p>
         ${source}
         <p class="url"><a href="${escapeHtml(accessUrl)}" target="_blank" rel="noreferrer">${escapeHtml(accessUrl)}</a></p>
-        ${warning}
+        <p class="meta">relay proxy: <a href="${escapeHtml(proxyUrl)}" target="_blank" rel="noreferrer">${escapeHtml(proxyUrl)}</a></p>
       </section>
       <section class="frame-card">
-        <iframe src="${escapeHtml(accessUrl)}" title="freemac target" referrerpolicy="no-referrer"></iframe>
+        <iframe src="${escapeHtml(proxyUrl)}" title="freemac target" referrerpolicy="no-referrer"></iframe>
       </section>
     `
     : `
@@ -165,13 +212,6 @@ function renderPage(target: StoredTarget | null, requestUrl: URL): string {
         background: rgba(37, 99, 235, 0.08);
         color: #1d4ed8;
       }
-      .warning {
-        margin-top: 16px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        background: #fff7ed;
-        color: #9a3412;
-      }
       iframe {
         width: 100%;
         min-height: calc(70vh - 24px);
@@ -192,6 +232,22 @@ function renderPage(target: StoredTarget | null, requestUrl: URL): string {
 
 Deno.serve(async (request) => {
   const url = new URL(request.url);
+
+  if (shouldProxy(url)) {
+    const target = await loadTarget();
+    if (!target) {
+      return new Response("freemac target is not available yet", { status: 503 });
+    }
+
+    try {
+      return await proxyToTarget(request, url, target);
+    } catch (error) {
+      return json({
+        ok: false,
+        message: error instanceof Error ? error.message : "Proxy request failed",
+      }, { status: 502 });
+    }
+  }
 
   if (request.method === "GET" && url.pathname === "/") {
     const target = await loadTarget();

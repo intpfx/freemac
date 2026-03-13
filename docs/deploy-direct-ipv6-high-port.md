@@ -45,11 +45,14 @@ chmod +x deploy/scripts/install-launchd-direct-ipv6.sh
 
 This will:
 
-- generate `deploy/env/freemac.core.env` from the direct IPv6 template if it does not exist
+- generate `deploy/env/freemac.core.env` from the direct IPv6 template if it
+  does not exist
 - generate `~/Library/LaunchAgents/com.freemac.core.plist`
 - load the freemac core launchd agent
 
-If you change the public port in the dashboard later, freemac will update the stored settings and the launchd env file. Restart the `com.freemac.core` agent to make the new port active if it is not already restarted.
+If you change the public port in the dashboard later, freemac will update the
+stored settings and the launchd env file. Restart the `com.freemac.core` agent
+to make the new port active if it is not already restarted.
 
 ## Environment file
 
@@ -74,7 +77,10 @@ launchctl unload ~/Library/LaunchAgents/com.freemac.core.plist
 launchctl load ~/Library/LaunchAgents/com.freemac.core.plist
 ```
 
-If you also deploy the companion Deno Deploy relay app, fill in its origin in the dashboard or set `FREEMAC_RELAY_ORIGIN` in the env file. freemac will then automatically POST the latest IPv6 and active port on startup and at a fixed interval.
+If you also deploy the companion Deno Deploy relay app, fill in its origin in
+the dashboard or set `FREEMAC_RELAY_ORIGIN` in the env file. freemac will then
+automatically POST the latest IPv6 and active port on startup and at a fixed
+interval.
 
 ## Find the current public IPv6
 
@@ -123,4 +129,5 @@ curl -g "http://[your-public-ipv6]:43200/api/health"
 ## Notes
 
 - This mode is appropriate for personal use, not polished public distribution.
-- If raw IPv6 URLs become too inconvenient, move to a tunnel or a VPS relay later.
+- If raw IPv6 URLs become too inconvenient, move to a tunnel or a VPS relay
+  later.

@@ -24,8 +24,16 @@ export const systemRoutes = new Elysia({ prefix: "/system" })
       return { ok: false, message: "Unauthorized" };
     }
 
-    return {
-      ok: true,
-      relay: await reportRelayTarget(),
-    };
-    });
+    try {
+      return {
+        ok: true,
+        relay: await reportRelayTarget(),
+      };
+    } catch (error) {
+      set.status = 400;
+      return {
+        ok: false,
+        message: error instanceof Error ? error.message : "Relay report failed.",
+      };
+    }
+  });
