@@ -5,36 +5,31 @@ interface Props {
 }
 
 export function TopProcesses({ snapshot }: Props) {
+  const processes = snapshot?.topProcesses.slice(0, 6) || [];
+
   return (
     <section className="panel">
       <div className="panel-header">
-        <h2>Top Processes</h2>
+        <h2>Top processes</h2>
       </div>
-      <table className="table">
-        <thead>
-          <tr>
-            <th>PID</th>
-            <th>Command</th>
-            <th>CPU</th>
-            <th>Memory</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(snapshot?.topProcesses || []).map((proc) => (
-            <tr key={proc.pid}>
-              <td>{proc.pid}</td>
-              <td>{proc.command}</td>
-              <td>{proc.cpu.toFixed(1)}%</td>
-              <td>{proc.memory.toFixed(1)}%</td>
-            </tr>
+      {processes.length ? (
+        <div className="process-list">
+          {processes.map((proc) => (
+            <article key={proc.pid} className="process-row">
+              <div>
+                <strong>{proc.command}</strong>
+                <small>PID {proc.pid}</small>
+              </div>
+              <div className="process-meta">
+                <span>{proc.cpu.toFixed(1)}% CPU</span>
+                <span>{proc.memory.toFixed(1)}% MEM</span>
+              </div>
+            </article>
           ))}
-          {!snapshot?.topProcesses.length && (
-            <tr>
-              <td colSpan={4}>No process data yet</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <p className="helper-text">No process data yet.</p>
+      )}
     </section>
   );
 }

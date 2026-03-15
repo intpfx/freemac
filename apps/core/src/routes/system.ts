@@ -18,9 +18,8 @@ export const systemRoutes = new Elysia({ prefix: "/system" })
     relay: await reportRelayTarget(),
     snapshot: await collectSystemSnapshot(),
   }))
-  .post("/report-relay", async ({ headers, set }) => {
+  .post("/report-relay", async ({ headers }) => {
     if (!hasSession(headers["x-session-id"])) {
-      set.status = 401;
       return { ok: false, message: "Unauthorized" };
     }
 
@@ -30,7 +29,6 @@ export const systemRoutes = new Elysia({ prefix: "/system" })
         relay: await reportRelayTarget(),
       };
     } catch (error) {
-      set.status = 400;
       return {
         ok: false,
         message: error instanceof Error ? error.message : "Relay report failed.",

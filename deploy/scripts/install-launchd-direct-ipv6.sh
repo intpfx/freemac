@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="${1:-$PWD}"
-PORT="${2:-43200}"
 BUN_BIN="${BUN_BIN:-$(command -v bun)}"
 HOME_DIR="$HOME"
 LAUNCH_AGENTS_DIR="$HOME_DIR/Library/LaunchAgents"
@@ -23,7 +22,6 @@ chmod +x "$ROOT_DIR/deploy/scripts/start-core.sh"
 if [[ ! -f "$ENV_FILE" ]]; then
   sed \
     -e "s|__FREEMAC_ROOT__|$ROOT_DIR|g" \
-    -e "s|FREEMAC_PORT=43200|FREEMAC_PORT=$PORT|g" \
     "$ENV_EXAMPLE" > "$ENV_FILE"
 fi
 
@@ -39,4 +37,4 @@ launchctl load "$CORE_TARGET"
 echo "Installed launchd agent:"
 echo "  $CORE_TARGET"
 echo "Using environment file: $ENV_FILE"
-echo "Remember to allow inbound TCP/$PORT on your router and macOS firewall."
+echo "Remember to allow inbound TCP/24531 on your router and macOS firewall."

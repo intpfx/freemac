@@ -1,4 +1,4 @@
-import { db } from "../db/client";
+import { createSessionRecord, deleteSessionRecord, hasActiveSessionRecord } from "../db/client";
 import { config } from "../config";
 import { nanoid } from "nanoid";
 import { getPasswordHash } from "./settings.service";
@@ -16,7 +16,11 @@ export function createSession(): string {
   const id = nanoid();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-  db.query("insert into sessions (id, created_at, expires_at) values (?, ?, ?)").run(id, now.toISOString(), expiresAt);
+  createSessionRecord({
+    id,
+    createdAt: now.toISOString(),
+    expiresAt,
+  });
   return id;
 }
 
@@ -24,13 +28,12 @@ export function hasSession(id: string | undefined): boolean {
   if (!id) {
     return false;
   }
-  const row = db.query("select id from sessions where id = ? and expires_at > ?").get(id, new Date().toISOString());
-  return !!row;
+  return hasActiveSessionRecord(id, new Date().toISOString());
 }
 
 export function destroySession(id: string | undefined): void {
   if (!id) {
     return;
   }
-  db.query("delete from sessions where id = ?").run(id);
+  deleteSessionRecord(id);
 }

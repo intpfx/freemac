@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",
-    "@elysiajs/static": "^1.4.7",
+    "@freemac/shared": "workspace:*",
     "elysia": "^1.4.27",
     "nanoid": "^5.1.5",
-    "@freemac/shared": "workspace:*"
+    "openai": "^6.29.0"
   },
   "devDependencies": {
     "bun-types": "latest"

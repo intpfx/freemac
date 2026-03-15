@@ -1,8 +1,4 @@
-export type DnsRecordType = "A" | "AAAA";
-
 export interface DdnsState {
-  domain: string;
-  subdomain: string;
   currentIpv6: string | null;
   observedIpv6: string | null;
   lastUpdatedAt: string | null;
@@ -20,12 +16,22 @@ export interface SystemSnapshot {
   networkRxMb: number;
   networkTxMb: number;
   batteryPercent: number | null;
+  processCount: number;
   topProcesses: Array<{
     pid: number;
     command: string;
     cpu: number;
     memory: number;
   }>;
+}
+
+export type AgentState = "idle" | "listening" | "thinking" | "responding";
+
+export interface AgentVisualProfile {
+  state: AgentState;
+  activeAgentCount: number;
+  conversationDepth: number;
+  lastToolExecution: string | null;
 }
 
 export interface ApprovalRequest {
@@ -57,11 +63,6 @@ export interface SetupStatus {
 
 export interface SetupInitPayload {
   password: string;
-  publicPort: number;
-}
-
-export interface NetworkSettingsPayload {
-  publicPort: number;
 }
 
 export interface RelaySettingsPayload {

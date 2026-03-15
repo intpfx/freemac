@@ -13,6 +13,7 @@ let snapshot: SystemSnapshot = {
   networkRxMb: 0,
   networkTxMb: 0,
   batteryPercent: null,
+  processCount: 0,
   topProcesses: [],
 };
 let hydrated = false;
@@ -42,7 +43,10 @@ function parseCpuUsage(output: string): number {
   return round(100 - Number(match[1] || 0));
 }
 
-function parseMemoryUsage(vmStatOutput: string, totalMemoryBytes: number): { usedMb: number; totalMb: number } {
+function parseMemoryUsage(
+  vmStatOutput: string,
+  totalMemoryBytes: number,
+): { usedMb: number; totalMb: number } {
   const pageSizeMatch = vmStatOutput.match(/page size of (\d+) bytes/i);
   const pageSize = Number(pageSizeMatch?.[1] || 4096);
   const lines = vmStatOutput.split("\n");
@@ -109,7 +113,9 @@ function parseTopProcesses(output: string): SystemSnapshot["topProcesses"] {
 
 function parseNetworkTotals(output: string): { rxMb: number; txMb: number } {
   const lines = output.trim().split("\n");
-  const header = lines.find((line) => line.includes("Name") && line.includes("Ibytes") && line.includes("Obytes"));
+  const header = lines.find(
+    (line) => line.includes("Name") && line.includes("Ibytes") && line.includes("Obytes"),
+  );
   if (!header) {
     return { rxMb: 0, txMb: 0 };
   }
@@ -163,15 +169,16 @@ export function getSystemSnapshot(): SystemSnapshot {
 export async function collectSystemSnapshot(): Promise<SystemSnapshot> {
   hydrateSnapshot();
   try {
-    const [topResult, memSizeResult, vmStatResult, dfResult, netstatResult, pmsetResult, psResult] = await Promise.all([
-      runCommand(["/usr/bin/top", "-l", "1", "-n", "0"]),
-      runCommand(["/usr/sbin/sysctl", "-n", "hw.memsize"]),
-      runCommand(["/usr/bin/vm_stat"]),
-      runCommand(["/bin/df", "-k", "/"]),
-      runCommand(["/usr/sbin/netstat", "-ibn"]),
-      runCommand(["/usr/bin/pmset", "-g", "batt"]),
-      runCommand(["/bin/ps", "-Ao", "pid=,pcpu=,pmem=,comm="]),
-    ]);
+    const [topResult, memSizeResult, vmStatResult, dfResult, netstatResult, pmsetResult, psResult] =
+      await Promise.all([
+        runCommand(["/usr/bin/top", "-l", "1", "-n", "0"]),
+        runCommand(["/usr/sbin/sysctl", "-n", "hw.memsize"]),
+        runCommand(["/usr/bin/vm_stat"]),
+        runCommand(["/bin/df", "-k", "/"]),
+        runCommand(["/usr/sbin/netstat", "-ibn"]),
+        runCommand(["/usr/bin/pmset", "-g", "batt"]),
+        runCommand(["/bin/ps", "-Ao", "pid=,pcpu=,pmem=,comm="]),
+      ]);
 
     const totalMemoryBytes = Number(memSizeResult.stdout.trim() || 0);
     const cpuUsagePercent = parseCpuUsage(topResult.stdout);
@@ -180,6 +187,7 @@ export async function collectSystemSnapshot(): Promise<SystemSnapshot> {
     const network = parseNetworkTotals(netstatResult.stdout);
     const batteryPercent = parseBatteryPercent(pmsetResult.stdout);
     const topProcesses = parseTopProcesses(psResult.stdout);
+    const processCount = psResult.stdout.trim().split("\n").filter(Boolean).length;
 
     snapshot = {
       collectedAt: new Date().toISOString(),
@@ -191,6 +199,7 @@ export async function collectSystemSnapshot(): Promise<SystemSnapshot> {
       networkRxMb: network.rxMb,
       networkTxMb: network.txMb,
       batteryPercent,
+      processCount,
       topProcesses,
     };
     saveTelemetrySnapshot(snapshot);

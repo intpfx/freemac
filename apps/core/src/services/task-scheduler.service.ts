@@ -2,7 +2,11 @@ type TaskHandle = ReturnType<typeof setInterval>;
 
 const tasks = new Map<string, TaskHandle>();
 
-export function registerIntervalTask(name: string, intervalMs: number, handler: () => Promise<unknown> | unknown): void {
+export function registerIntervalTask(
+  name: string,
+  intervalMs: number,
+  handler: () => Promise<unknown> | unknown,
+): void {
   stopTask(name);
   const handle = setInterval(() => {
     void handler();

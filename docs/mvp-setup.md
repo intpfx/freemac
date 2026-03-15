@@ -12,15 +12,16 @@ bun install
 bun run dev
 ```
 
-Core service defaults to `http://127.0.0.1:3200`. Web dev server defaults to
+Core service defaults to `http://127.0.0.1:24531`. Web dev server defaults to
 `http://127.0.0.1:5173`.
 
 ## First-run setup
 
 On first launch, open the dashboard and complete the setup form.
 
-- The local dashboard login password is hashed and stored in SQLite.
-- The chosen direct public port is persisted to SQLite.
+- The local dashboard login password is hashed and stored in the file-backed
+  state store.
+- The direct public port is fixed at `24531`.
 
 If you want to skip domains and HTTPS entirely, use
 [docs/deploy-direct-ipv6-high-port.md](/Users/siaovon/Documents/Projects/freemac/docs/deploy-direct-ipv6-high-port.md).
@@ -28,7 +29,6 @@ If you want to skip domains and HTTPS entirely, use
 ## Environment variables
 
 - `FREEMAC_HOST`
-- `FREEMAC_PORT`
 - `FREEMAC_PASSWORD`
 - `FREEMAC_DATA_DIR`
 - `FREEMAC_WEB_DIST`

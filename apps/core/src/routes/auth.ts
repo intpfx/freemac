@@ -1,5 +1,10 @@
 import { Elysia, t } from "elysia";
-import { createSession, destroySession, hasSession, verifyPassword } from "../services/auth.service";
+import {
+  createSession,
+  destroySession,
+  hasSession,
+  verifyPassword,
+} from "../services/auth.service";
 
 export const authRoutes = new Elysia({ prefix: "/auth" })
   .get("/status", ({ headers }) => ({
@@ -8,9 +13,8 @@ export const authRoutes = new Elysia({ prefix: "/auth" })
   }))
   .post(
     "/login",
-    async ({ body, set }) => {
+    async ({ body }) => {
       if (!(await verifyPassword(body.password))) {
-        set.status = 401;
         return { ok: false, message: "Invalid password" };
       }
 

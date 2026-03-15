@@ -12,13 +12,13 @@ Use this mode if:
 
 This mode is simpler than Caddy plus domain deployment, but it has tradeoffs:
 
-- the URL is ugly: `http://[your-public-ipv6]:43200`
+- the URL is ugly: `http://[your-public-ipv6]:24531`
 - some mobile environments still handle raw IPv6 URLs poorly
 - there is no HTTPS termination in this mode
 
 ## Architecture
 
-- freemac core listens directly on `::` and a high port such as `43200`
+- freemac core listens directly on `::` and the fixed port `24531`
 - clients connect directly to the Mac's public IPv6 and that port
 - no Caddy, no domain, no certificate flow
 
@@ -26,8 +26,8 @@ This mode is simpler than Caddy plus domain deployment, but it has tradeoffs:
 
 - Bun installed at a stable path such as `/opt/homebrew/bin/bun`
 - the Mac has a real public IPv6 address
-- your router allows inbound TCP on the chosen high port
-- macOS firewall allows inbound TCP on the chosen high port
+- your router allows inbound TCP on `24531`
+- macOS firewall allows inbound TCP on `24531`
 
 ## Build the app
 
@@ -40,7 +40,7 @@ bun run build
 
 ```bash
 chmod +x deploy/scripts/install-launchd-direct-ipv6.sh
-./deploy/scripts/install-launchd-direct-ipv6.sh "$PWD" 43200
+./deploy/scripts/install-launchd-direct-ipv6.sh "$PWD"
 ```
 
 This will:
@@ -50,9 +50,8 @@ This will:
 - generate `~/Library/LaunchAgents/com.freemac.core.plist`
 - load the freemac core launchd agent
 
-If you change the public port in the dashboard later, freemac will update the
-stored settings and the launchd env file. Restart the `com.freemac.core` agent
-to make the new port active if it is not already restarted.
+The public port is fixed at `24531`. Restart the `com.freemac.core` agent if you
+update host or relay-related settings in the env file.
 
 ## Environment file
 
@@ -64,7 +63,6 @@ Recommended values:
 
 ```env
 FREEMAC_HOST=::
-FREEMAC_PORT=43200
 FREEMAC_WEB_DIST=/absolute/path/to/freemac/apps/web/dist
 FREEMAC_DATA_DIR=/absolute/path/to/freemac/.data/direct-ipv6
 FREEMAC_RELAY_ORIGIN=
@@ -93,7 +91,7 @@ curl -6 https://api64.ipify.org
 If the result is `2409:xxxx:...`, your access URL is:
 
 ```text
-http://[2409:xxxx:...]:43200
+http://[2409:xxxx:...]:24531
 ```
 
 The square brackets are required for IPv6 URLs with ports.
@@ -103,14 +101,14 @@ The square brackets are required for IPv6 URLs with ports.
 From the Mac:
 
 ```bash
-curl http://127.0.0.1:43200/api/health
-curl -g "http://[::1]:43200/api/health"
+curl http://127.0.0.1:24531/api/health
+curl -g "http://[::1]:24531/api/health"
 ```
 
 From another IPv6-capable device or network:
 
 ```bash
-curl -g "http://[your-public-ipv6]:43200/api/health"
+curl -g "http://[your-public-ipv6]:24531/api/health"
 ```
 
 ## Common failure points

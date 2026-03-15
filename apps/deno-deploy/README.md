@@ -6,7 +6,7 @@ This app is intended to be deployed on Deno Deploy.
 
 - accepts a POST request from the Mac with the latest public IPv6 and port
 - persists the latest target in Deno KV
-- serves a simple web page that renders the latest target in an iframe
+- serves a relay page and reverse-proxies the live freemac app through `/app`
 - exposes a JSON status endpoint
 
 ## Endpoints
@@ -27,16 +27,14 @@ curl -X POST https://your-deno-app.deno.dev/api/report \
   -H 'authorization: Bearer YOUR_TOKEN' \
   -d '{
     "ipv6": "2409:8a62:3210:3010:4845:d014:d517:117e",
-    "port": 43200,
+    "port": 24531,
     "protocol": "http",
     "source": "freemac-home"
   }'
 ```
 
-## Important browser limitation
+## Proxy behavior
 
-If this Deno Deploy app is served over `https://` and the target freemac page is only available over
-`http://[ipv6]:port`, browsers will usually block the iframe as mixed content.
-
-In that case the stored target is still useful as a status page and launch link, but the embedded
-iframe will not fully work until the target is exposed over HTTPS.
+The relay page uses `/app` and related proxied paths to embed the live freemac UI through the Deno
+Deploy origin. This avoids the browser mixed-content block that would happen if an `https://` page
+tried to iframe `http://[ipv6]:24531` directly.

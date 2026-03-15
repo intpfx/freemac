@@ -30,7 +30,10 @@ const server = app.listen({
   port: config.port,
 });
 
-logger.info("core", `freemac core listening on http://${formatListenHost(config.host)}:${config.port}`);
+logger.info(
+  "core",
+  `freemac core listening on http://${formatListenHost(config.host)}:${config.port}`,
+);
 
 process.on("SIGINT", () => {
   stopAllTasks();

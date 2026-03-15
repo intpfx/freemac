@@ -30,7 +30,9 @@ export const eventsRoutes = new Elysia({ prefix: "/events" }).get("/stream", ({ 
           }
 
           try {
-            controller.enqueue(`data: ${JSON.stringify({ setup: await getSetupStatus(), ddns: getDdnsState(), relay: getRelayReportState(), snapshot: getSystemSnapshot() })}\n\n`);
+            controller.enqueue(
+              `data: ${JSON.stringify({ setup: await getSetupStatus(), ddns: getDdnsState(), relay: getRelayReportState(), snapshot: getSystemSnapshot() })}\n\n`,
+            );
           } catch {
             cleanup();
           }

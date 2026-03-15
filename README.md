@@ -1,12 +1,12 @@
 # freemac
 
-A Bun-first MVP scaffold for a Mac dashboard with IPv6 DDNS, telemetry, and a
-restricted natural-language agent.
+A Bun-first MVP scaffold for a Mac dashboard with public IPv6 observation,
+telemetry, and a restricted natural-language agent.
 
 ## Workspace
 
 - `apps/core`: Bun + Elysia local service
-- `apps/web`: React + Vite dashboard
+- `apps/web`: React + Vite+ dashboard
 - `apps/deno-deploy`: Deno Deploy relay that stores the latest IPv6 endpoint in
   Deno KV and renders it in a web page
 - `packages/shared`: shared types and schemas
@@ -18,10 +18,11 @@ restricted natural-language agent.
 - `bun run dev`
 - `bun run build`
 - `bun run check`
+- `vp install`
 
 ## MVP scope
 
-- Alibaba Cloud AAAA DDNS updater
+- Public IPv6 observation plus Deno Deploy relay reporting
 - Local telemetry collection for macOS
 - Browser dashboard with SSE updates
 - Restricted tool registry with approval flow

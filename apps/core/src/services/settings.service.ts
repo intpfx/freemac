@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import type { NetworkSettingsPayload, RelaySettingsPayload, SetupInitPayload, SetupStatus } from "@freemac/shared";
+import type { RelaySettingsPayload, SetupInitPayload, SetupStatus } from "@freemac/shared";
 import { applyRuntimeConfig, config } from "../config";
 import { loadAppSettings, saveAppSettings } from "../db/client";
 
@@ -14,7 +14,7 @@ function normalizeRelayOriginInput(value: string): string {
   return new URL(candidate).origin;
 }
 
-function updateRuntimeEnvFile(publicHost: string, publicPort: number, relayOrigin?: string): boolean {
+function updateRuntimeEnvFile(publicHost: string, relayOrigin?: string): boolean {
   const envFile = process.env.FREEMAC_ENV_FILE;
   if (!envFile || !existsSync(envFile)) {
     return false;
@@ -33,28 +33,28 @@ function updateRuntimeEnvFile(publicHost: string, publicPort: number, relayOrigi
   }
 
   nextLines.set("FREEMAC_HOST", publicHost);
-  nextLines.set("FREEMAC_PORT", String(publicPort));
   if (relayOrigin !== undefined) {
     nextLines.set("FREEMAC_RELAY_ORIGIN", relayOrigin);
   }
 
-  const output = lines
-    .map((line) => {
-      const separatorIndex = line.indexOf("=");
-      if (separatorIndex === -1) {
-        return line;
-      }
-      const key = line.slice(0, separatorIndex);
-      if (!nextLines.has(key)) {
-        return line;
-      }
-      const value = nextLines.get(key)!;
-      nextLines.delete(key);
-      return `${key}=${value}`;
-    })
-    .concat([...nextLines.entries()].map(([key, value]) => `${key}=${value}`))
-    .join("\n")
-    .replace(/\n+$/, "") + "\n";
+  const output =
+    lines
+      .map((line) => {
+        const separatorIndex = line.indexOf("=");
+        if (separatorIndex === -1) {
+          return line;
+        }
+        const key = line.slice(0, separatorIndex);
+        if (!nextLines.has(key)) {
+          return line;
+        }
+        const value = nextLines.get(key)!;
+        nextLines.delete(key);
+        return `${key}=${value}`;
+      })
+      .concat([...nextLines.entries()].map(([key, value]) => `${key}=${value}`))
+      .join("\n")
+      .replace(/\n+$/, "") + "\n";
 
   writeFileSync(envFile, output, "utf8");
   return true;
@@ -63,7 +63,7 @@ function updateRuntimeEnvFile(publicHost: string, publicPort: number, relayOrigi
 function buildSetupStatus(): SetupStatus {
   const settings = loadAppSettings();
   const publicHost = settings?.publicHost || config.host;
-  const publicPort = settings?.publicPort || config.port;
+  const publicPort = config.port;
   const relayOrigin = settings?.relayOrigin?.trim() || config.relayOrigin;
 
   return {
@@ -74,7 +74,7 @@ function buildSetupStatus(): SetupStatus {
     relayOrigin,
     currentListenHost: config.host,
     currentListenPort: config.port,
-    restartRequired: publicHost !== config.host || publicPort !== config.port,
+    restartRequired: publicHost !== config.host,
     launchdManaged: Boolean(process.env.FREEMAC_ENV_FILE),
   };
 }
@@ -88,7 +88,6 @@ export async function hydrateRuntimeSettings(): Promise<void> {
 
   applyRuntimeConfig({
     host: settings?.publicHost,
-    port: settings?.publicPort,
     relayOrigin: settings?.relayOrigin?.trim() ? settings.relayOrigin : config.relayOrigin,
   });
 
@@ -109,30 +108,15 @@ export async function initializeSetup(payload: SetupInitPayload): Promise<SetupS
     passwordHash,
     initializedAt,
     publicHost: "::",
-    publicPort: payload.publicPort,
+    publicPort: config.port,
     relayOrigin: settings?.relayOrigin?.trim() || config.relayOrigin,
   });
 
-  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin?.trim() || config.relayOrigin);
+  updateRuntimeEnvFile("::", settings?.relayOrigin?.trim() || config.relayOrigin);
 
   applyRuntimeConfig({ sessionPassword: payload.password });
 
   hydrated = true;
-  return getSetupStatus();
-}
-
-export async function updateNetworkSettings(payload: NetworkSettingsPayload): Promise<SetupStatus> {
-  const settings = loadAppSettings();
-
-  saveAppSettings({
-    passwordHash: settings?.passwordHash || null,
-    initializedAt: settings?.initializedAt || null,
-    publicHost: "::",
-    publicPort: payload.publicPort,
-    relayOrigin: settings?.relayOrigin?.trim() || config.relayOrigin,
-  });
-
-  updateRuntimeEnvFile("::", payload.publicPort, settings?.relayOrigin?.trim() || config.relayOrigin);
   return getSetupStatus();
 }
 
@@ -144,12 +128,12 @@ export async function updateRelaySettings(payload: RelaySettingsPayload): Promis
     passwordHash: settings?.passwordHash || null,
     initializedAt: settings?.initializedAt || null,
     publicHost: settings?.publicHost || config.host,
-    publicPort: settings?.publicPort || config.port,
+    publicPort: config.port,
     relayOrigin,
   });
 
   applyRuntimeConfig({ relayOrigin });
-  updateRuntimeEnvFile(settings?.publicHost || config.host, settings?.publicPort || config.port, relayOrigin);
+  updateRuntimeEnvFile(settings?.publicHost || config.host, relayOrigin);
   return getSetupStatus();
 }
 

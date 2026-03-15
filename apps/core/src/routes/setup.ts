@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { initializeSetup, getSetupStatus, updateNetworkSettings, updateRelaySettings } from "../services/settings.service";
+import { initializeSetup, getSetupStatus, updateRelaySettings } from "../services/settings.service";
 import { runDdnsSync } from "../services/ddns.service";
 import { hasSession } from "../services/auth.service";
 import { reportRelayTarget } from "../services/relay-report.service";
@@ -19,35 +19,13 @@ export const setupRoutes = new Elysia({ prefix: "/setup" })
     {
       body: t.Object({
         password: t.String({ minLength: 8, maxLength: 200 }),
-        publicPort: t.Number({ minimum: 1025, maximum: 65535 }),
-      }),
-    },
-  )
-  .post(
-    "/network",
-    async ({ body, headers, set }) => {
-      if (!hasSession(headers["x-session-id"])) {
-        set.status = 401;
-        return { ok: false, message: "Unauthorized" };
-      }
-
-      return {
-        ok: true,
-        status: await updateNetworkSettings(body),
-        message: "Port saved. Restart freemac core to apply the new listen port if launchd does not restart it automatically.",
-      };
-    },
-    {
-      body: t.Object({
-        publicPort: t.Number({ minimum: 1025, maximum: 65535 }),
       }),
     },
   )
   .post(
     "/relay",
-    async ({ body, headers, set }) => {
+    async ({ body, headers }) => {
       if (!hasSession(headers["x-session-id"])) {
-        set.status = 401;
         return { ok: false, message: "Unauthorized" };
       }
 
@@ -63,7 +41,6 @@ export const setupRoutes = new Elysia({ prefix: "/setup" })
             : "Relay origin cleared. Automatic reporting is disabled.",
         };
       } catch (error) {
-        set.status = 400;
         return {
           ok: false,
           message: error instanceof Error ? error.message : "Invalid relay origin.",

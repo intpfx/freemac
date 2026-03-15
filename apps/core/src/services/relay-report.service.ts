@@ -80,7 +80,9 @@ export async function reportRelayTarget(): Promise<RelayReportState> {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Relay report failed with ${response.status}: ${text || response.statusText}`);
+      throw new Error(
+        `Relay report failed with ${response.status}: ${text || response.statusText}`,
+      );
     }
 
     relayState.status = "idle";
